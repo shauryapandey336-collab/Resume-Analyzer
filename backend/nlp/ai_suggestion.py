@@ -1,5 +1,4 @@
-import re
-
+from nlp.ollama_client import query_ollama, is_ollama_available
 
 def generate_ai_suggestions(
     resume_text,
@@ -8,6 +7,52 @@ def generate_ai_suggestions(
     ats_score,
     resume_score
 ):
+
+    # Try utilizing Ollama first if available
+    try:
+        if is_ollama_available():
+            prompt = f"""
+As an expert ATS resume reviewer, analyze the following candidate resume information and generate personalized, student-friendly recommendations.
+You are given the resume text, extracted sections, scores, and technical details.
+Identify:
+1. Strengths: key positive aspects of the resume.
+2. Weaknesses: specific gaps or areas of improvement in formatting, text, or skills.
+3. Suggestions: actionable steps the student can take to improve their resume and get a higher ATS score.
+
+Format the output as a single JSON object. Ensure all fields are present:
+- strengths: (list of strings)
+- weaknesses: (list of strings)
+- suggestions: (list of strings)
+
+Resume Details:
+- Name: {parsed_data.get('name', 'Not found')}
+- Email: {parsed_data.get('email', 'Not found')}
+- Phone: {parsed_data.get('phone', 'Not found')}
+- GitHub: {parsed_data.get('github', 'Not found')}
+- LinkedIn: {parsed_data.get('linkedin', 'Not found')}
+- Technical Skills: {skills.get('technicalSkills', [])}
+- Soft Skills: {skills.get('softSkills', [])}
+- Education details: {parsed_data.get('education', [])}
+- Experience details: {parsed_data.get('experience', [])}
+- Projects details: {parsed_data.get('projects', [])}
+- Current ATS compatibility estimation: {ats_score}/100
+- Resume completeness score: {resume_score}/100
+
+Resume Text:
+{resume_text[:2500]}
+"""
+            llm_suggestions = query_ollama(prompt)
+            if llm_suggestions and isinstance(llm_suggestions, dict):
+                return {
+                    "strengths": [str(s).strip() for s in llm_suggestions.get("strengths", [])],
+                    "weaknesses": [str(w).strip() for w in llm_suggestions.get("weaknesses", [])],
+                    "suggestions": [str(s).strip() for s in llm_suggestions.get("suggestions", [])]
+                }
+    except Exception as e:
+        print(f"[Ollama Suggestion Generator] Error generating suggestions via LLM: {e}")
+
+    # Fallback to rule-based suggestions
+    print("[Ollama Suggestion Generator] Falling back to rule-based suggestions.")
 
     strengths = []
     weaknesses = []
