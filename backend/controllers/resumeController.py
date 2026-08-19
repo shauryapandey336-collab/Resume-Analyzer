@@ -146,12 +146,12 @@ def upload_resume(current_user):
 
         resume_text = extract_text(filepath)
 
-        cleaned_text = preprocess_text(
+        parsed_data = parse_resume(
             resume_text
         )
 
-        parsed_data = parse_resume(
-            cleaned_text
+        cleaned_text = preprocess_text(
+            resume_text
         )
 
         skills = detect_skills(
