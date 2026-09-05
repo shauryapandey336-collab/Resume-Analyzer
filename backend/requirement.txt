@@ -22,3 +22,5 @@ docx2txt==0.9
 regex==2025.7.34
 
 gunicorn==23.0.0
+
+groq==1.7.0

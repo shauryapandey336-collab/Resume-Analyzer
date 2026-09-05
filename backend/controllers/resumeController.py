@@ -616,12 +616,25 @@ def job_matching(current_user):
         )
 
         result = match_job(
-
-            resume_text,
-
-            job_description
-
-        )
+    resume_text=resume_text,
+    job_description=job_description,
+    parsed_data=record.get(
+        "parsed_data",
+        {}
+    ),
+    skills=record.get(
+        "skills",
+        {}
+    ),
+    ats_score=record.get(
+        "ats_score",
+        {}
+    ),
+    resume_score=record.get(
+        "resume_score",
+        0
+    )
+)
 
         analysis.update_one(
 
