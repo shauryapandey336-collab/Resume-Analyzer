@@ -1,4 +1,4 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, jsonify
 
 from middleware.auth import token_required
 
@@ -316,7 +316,8 @@ or job searching.
 
         result = query_llm(
             prompt,
-            system_prompt=system_prompt
+            system_prompt=system_prompt,
+            json_mode=False
         )
 
         if result is None:
@@ -330,12 +331,14 @@ or job searching.
         # Success
         # --------------------------------------
 
-        return _success(
-            "AI response generated successfully.",
-            {
+        return jsonify({
+            "success": True,
+            "message": "AI response generated successfully.",
+            "response": result,
+            "data": {
                 "response": result
             }
-        )
+        }), 200
 
     except Exception as e:
 

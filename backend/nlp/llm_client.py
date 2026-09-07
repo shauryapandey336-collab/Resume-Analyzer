@@ -24,6 +24,13 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 GROQ_TIMEOUT = int(os.getenv("GROQ_TIMEOUT", "45"))
 
+# Fallback models to try if the primary fails
+FALLBACK_MODELS = [
+    "openai/gpt-oss-120b",
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+]
+
 _client = None
 
 
@@ -58,7 +65,7 @@ def is_llm_available():
 # LLM Query
 # ---------------------------------------------------------
 
-def query_llm(prompt, system_prompt=None, timeout=None):
+def query_llm(prompt, system_prompt=None, timeout=None, json_mode=True):
 
     client = get_client()
 
@@ -66,48 +73,61 @@ def query_llm(prompt, system_prompt=None, timeout=None):
         print("Groq LLM unavailable: GROQ_API_KEY is not configured.")
         return None
 
-    try:
+    messages = []
 
-        messages = []
-
-        if system_prompt:
-            messages.append({
-                "role": "system",
-                "content": system_prompt
-            })
-
+    if system_prompt:
         messages.append({
-            "role": "user",
-            "content": prompt
+            "role": "system",
+            "content": system_prompt
         })
 
-        request_args = {
-            "model": GROQ_MODEL,
-            "messages": messages,
-            "temperature": 0.2,
-            "response_format": {
-                "type": "json_object"
-            }
+    messages.append({
+        "role": "user",
+        "content": prompt
+    })
+
+    request_args = {
+        "model": GROQ_MODEL,
+        "messages": messages,
+        "temperature": 0.2,
+    }
+
+    if json_mode:
+        request_args["response_format"] = {
+            "type": "json_object"
         }
 
-        if timeout is not None:
-            request_args["timeout"] = timeout
+    if timeout is not None:
+        request_args["timeout"] = timeout
 
-        response = client.chat.completions.create(
-            **request_args
-        )
+    # Try primary model first, then fallbacks
+    models_to_try = [GROQ_MODEL] + [
+        m for m in FALLBACK_MODELS if m != GROQ_MODEL
+    ]
 
-        content = response.choices[0].message.content
+    for model_id in models_to_try:
+        try:
+            request_args["model"] = model_id
+            response = client.chat.completions.create(
+                **request_args
+            )
 
-        if not content:
-            return None
+            content = response.choices[0].message.content
 
-        return json.loads(content)
+            if not content:
+                continue
 
-    except json.JSONDecodeError as e:
-        print(f"Groq returned invalid JSON: {e}")
-        return None
+            if json_mode:
+                try:
+                    return json.loads(content)
+                except json.JSONDecodeError:
+                    return content
 
-    except Exception as e:
-        print(f"Groq LLM error: {e}")
-        return None
+            return content
+
+        except Exception as e:
+            print(f"Groq LLM error with model '{model_id}': {e}")
+            continue
+
+    print("All Groq models failed.")
+    return None
