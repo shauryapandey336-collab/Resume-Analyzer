@@ -5,39 +5,70 @@ from flask_jwt_extended import JWTManager
 from config import Config
 from routes.web import web
 
+
+# ==========================================
+# Create Flask Application
+# ==========================================
+
 app = Flask(__name__)
 
-# ======================================
+
+# ==========================================
 # Configuration
-# ======================================
+# ==========================================
 
 app.config["JWT_SECRET_KEY"] = Config.JWT_SECRET_KEY
+
 app.config["UPLOAD_FOLDER"] = Config.UPLOAD_FOLDER
+
 app.config["MAX_CONTENT_LENGTH"] = Config.MAX_CONTENT_LENGTH
 
-# ======================================
-# Initialize Extensions
-# ======================================
+
+# ==========================================
+# Initialize CORS
+# ==========================================
 
 CORS(
     app,
-    resources={r"/api/*": {"origins": "*"}}
+    resources={
+        r"/api/*": {
+            "origins": "*"
+        }
+    },
+    allow_headers=[
+        "Content-Type",
+        "Authorization"
+    ],
+    methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+    ]
 )
+
+
+# ==========================================
+# Initialize JWT Extension
+# ==========================================
 
 jwt = JWTManager(app)
 
-# ======================================
+
+# ==========================================
 # Register Blueprint
-# ======================================
+# ==========================================
 
 app.register_blueprint(
     web,
     url_prefix="/api"
 )
 
-# ======================================
+
+# ==========================================
 # Home Route
-# ======================================
+# ==========================================
 
 @app.route("/")
 def home():
@@ -47,9 +78,10 @@ def home():
         "message": "🚀 AI Resume Analyzer Backend Running Successfully"
     })
 
-# ======================================
+
+# ==========================================
 # Health Check
-# ======================================
+# ==========================================
 
 @app.route("/health")
 def health():
@@ -59,9 +91,10 @@ def health():
         "status": "Running"
     })
 
-# ======================================
+
+# ==========================================
 # JWT Error Handlers
-# ======================================
+# ==========================================
 
 @jwt.expired_token_loader
 def expired_token(jwt_header, jwt_payload):
@@ -90,9 +123,9 @@ def unauthorized(error):
     }), 401
 
 
-# ======================================
-# Error Handlers
-# ======================================
+# ==========================================
+# 404 Handler
+# ==========================================
 
 @app.errorhandler(404)
 def page_not_found(error):
@@ -103,6 +136,10 @@ def page_not_found(error):
     }), 404
 
 
+# ==========================================
+# 500 Handler
+# ==========================================
+
 @app.errorhandler(500)
 def internal_server_error(error):
 
@@ -112,9 +149,9 @@ def internal_server_error(error):
     }), 500
 
 
-# ======================================
+# ==========================================
 # Run Server
-# ======================================
+# ==========================================
 
 if __name__ == "__main__":
 
